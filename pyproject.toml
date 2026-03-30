@@ -25,4 +25,4 @@ dependencies = [
 dev = ["pytest"]
 
 [project.scripts]
-server = "server.app:app"
+server = "server.app:main"
