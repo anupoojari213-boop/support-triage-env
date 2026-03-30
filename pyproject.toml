@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "support-triage-env"
+version = "1.0.0"
+description = "OpenEnv-compatible RL environment for customer support ticket triage"
+authors = [
+    {name = "Ananya"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2.0",
+    "openenv",
+    "python-dotenv",
+    "requests",
+    "pyyaml",
+    "openai",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
