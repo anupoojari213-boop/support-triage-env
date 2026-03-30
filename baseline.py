@@ -1,0 +1,82 @@
+import requests
+
+BASE_URL = "http://localhost:7860"
+
+def mock_agent(obs: dict) -> dict:
+    """Rule-based agent — no API key needed."""
+    body = obs["body"].lower()
+    subject = obs["subject"].lower()
+    tier = obs["customer_tier"]
+    sentiment = obs["sentiment_hint"]
+
+    # Determine priority
+    if tier == "enterprise" or "breach" in body or "sla" in body or "legal" in body:
+        priority = "critical"
+    elif sentiment == "angry" or "crash" in body or "charge" in body or "twice" in body:
+        priority = "high"
+    elif tier == "pro":
+        priority = "medium"
+    else:
+        priority = "low"
+
+    # Determine category
+    if any(w in body+subject for w in ["password", "login", "account", "access"]):
+        category = "account"
+    elif any(w in body+subject for w in ["charge", "invoice", "billing", "payment"]):
+        category = "billing"
+    elif any(w in body+subject for w in ["crash", "bug", "error", "breach", "outage"]):
+        category = "technical"
+    else:
+        category = "general"
+
+    # Determine sentiment response
+    if tier == "enterprise":
+        sentiment_response = "formal"
+    elif sentiment == "angry":
+        sentiment_response = "empathetic"
+    else:
+        sentiment_response = "neutral"
+
+    # Generate response draft
+    response_draft = (
+        f"Thank you for reaching out to our support team. "
+        f"I understand your concern regarding '{obs['subject']}' and I sincerely apologize for any inconvenience caused. "
+        f"Our team has flagged this as a {priority} priority issue and we will resolve it as quickly as possible. "
+        f"Please allow us some time to investigate and we will follow up with you shortly."
+    )
+
+    return {
+        "priority": priority,
+        "category": category,
+        "sentiment_response": sentiment_response,
+        "response_draft": response_draft
+    }
+
+def run_task(task_level: str):
+    print(f"\n--- Running task: {task_level} ---")
+
+    obs = requests.post(f"{BASE_URL}/reset?task={task_level}").json()
+    print(f"Ticket: {obs['subject']}")
+
+    action = mock_agent(obs)
+    print(f"Agent action: priority={action['priority']}, category={action['category']}")
+
+    result = requests.post(
+        f"{BASE_URL}/grader?task={task_level}",
+        json=action
+    ).json()
+
+    print(f"Score: {result['score']}")
+    print(f"Breakdown: {result['breakdown']}")
+    return result['score']
+
+if __name__ == "__main__":
+    scores = {}
+    for level in ["easy", "medium", "hard"]:
+        scores[level] = run_task(level)
+
+    print("\n=== BASELINE RESULTS ===")
+    for level, score in scores.items():
+        print(f"{level}: {score}")
+    avg = sum(scores.values()) / len(scores)
+    print(f"Average: {round(avg, 3)}")
